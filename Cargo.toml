@@ -1,6 +1,6 @@
 [package]
 name = "iron-sessionstorage"
-version = "0.6.6"
+version = "0.6.7"
 
 authors = ["Markus Unterwaditzer <markus@unterwaditzer.net>"]
 license = "MIT"
@@ -8,8 +8,8 @@ keywords = ["iron", "sessions", "cookie", "user", "login"]
 readme = "README.md"
 
 description = "Session middleware for Iron."
-repository = "https://github.com/iron/iron-sessionstorage"
-homepage = "https://github.com/iron/iron-sessionstorage"
+repository = "https://github.com/yinyanlv/iron-sessionstorage"
+homepage = "https://github.com/yinyanlv/iron-sessionstorage"
 
 [dependencies]
 iron = "0.5"
