@@ -54,7 +54,7 @@ impl RawSession for RedisSession {
             cookies.push(format!("{}", cookie.pair()));
             return Ok(());
         }
-        res.headers.set(iron::headers::SetCookie(vec![format!("{}", cookie.pair())]));
+        res.headers.set(iron::headers::SetCookie(vec![format!("{};Path={};HttpOnly", cookie.pair(), cookie.path.clone().unwrap())]));
         Ok(())
     }
 }
