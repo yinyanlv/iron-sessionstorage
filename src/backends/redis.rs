@@ -78,7 +78,7 @@ impl SessionBackend for RedisBackend {
     type S = RedisSession;
 
     fn from_request(&self, req: &mut Request) -> Self::S {
-        let session_id = req.headers.get::<iron::headers::Cookie>()
+        let mut session_id = req.headers.get::<iron::headers::Cookie>()
             .map(|cookies| {
                 // FIXME: Our cookies are unsigned. Why do I need to specify a key?
                 let mut jar = cookie::CookieJar::new(b"");
@@ -95,6 +95,11 @@ impl SessionBackend for RedisBackend {
                 let mut rng = rand::OsRng::new().unwrap();
                 String::from_iter(rng.gen_ascii_chars().take(40))
             });
+
+        if session_id == "" {
+            let mut rng = rand::OsRng::new().unwrap();
+            session_id = String::from_iter(rng.gen_ascii_chars().take(40))
+        }
 
         RedisSession {
             session_id: session_id,
