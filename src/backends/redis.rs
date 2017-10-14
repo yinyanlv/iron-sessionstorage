@@ -23,17 +23,20 @@ type RedisPool = r2d2::Pool<RedisConnectionManager>;
 pub struct RedisSession {
     session_id: String,
     pool: RedisPool,
+    expire: usize
 }
 
 impl RawSession for RedisSession {
     fn get_raw(&self, key: &str) -> IronResult<Option<String>> {
         let conn = itry!(self.pool.get());
+        itry!(conn.expire(&self.session_id, self.expire));
         Ok(itry!(conn.hget(&self.session_id, key)))
     }
 
     fn set_raw(&mut self, key: &str, value: String) -> IronResult<()> {
         let conn = itry!(self.pool.get());
         itry!(conn.hset(&self.session_id, key, value));
+        itry!(conn.expire(&self.session_id, self.expire));
         Ok(())
     }
 
@@ -51,25 +54,29 @@ impl RawSession for RedisSession {
         );
         if let Some(mut cookies) = res.headers.get_mut::<iron::headers::SetCookie>() {
             debug_assert!(cookies.iter().all(|cookie| cookie != COOKIE_NAME));
-            cookies.push(format!("{}", cookie.pair()));
+            cookies.push(format!("{};Path={};Max-Age={};HttpOnly", cookie.pair(), cookie.path.clone().unwrap(), self.expire));
             return Ok(());
         }
-        res.headers.set(iron::headers::SetCookie(vec![format!("{};Path={};HttpOnly", cookie.pair(), cookie.path.clone().unwrap())]));
+        res.headers.set(iron::headers::SetCookie(vec![format!("{};Path={};Max-Age={};HttpOnly", cookie.pair(), cookie.path.clone().unwrap(), self.expire)]));
         Ok(())
     }
 }
 
 pub struct RedisBackend {
-    pool: RedisPool
+    pool: RedisPool,
+    expire: usize
 }
 
 impl RedisBackend {
-    pub fn new<T: redis::IntoConnectionInfo>(params: T) -> Result<Self> {
+    pub fn new<T: redis::IntoConnectionInfo>(params: T, expire: u64) -> Result<Self> {
         let config = Default::default();
         let manager = try!(RedisConnectionManager::new(params).chain_err(|| "Couldn't create redis connection manager"));
         let pool = try!(r2d2::Pool::new(config, manager).chain_err(|| "Couldn't create redis connection pool"));
 
-        Ok(RedisBackend { pool: pool })
+        Ok(RedisBackend {
+            pool: pool,
+            expire: expire as usize
+        })
     }
 }
 
@@ -104,6 +111,7 @@ impl SessionBackend for RedisBackend {
         RedisSession {
             session_id: session_id,
             pool: self.pool.clone(),
+            expire: self.expire
         }
     }
 }
